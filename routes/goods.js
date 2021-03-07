@@ -2,10 +2,11 @@ const express = require('express');
 var router = express.Router();
 var Good = require('../model/good')
 var History = require('../model/history')
-const { successCode, errorCode, emptyCode, permissionCode, emptyMessage, permissionMessage } = require('../config/config')
+const { tokenKey, successCode, errorCode, emptyCode, permissionCode, emptyMessage, permissionMessage } = require('../config/config')
 var verifyToken = require('../utils/verifyToken');
 const User = require('../model/user');
 const { Op } = require('sequelize');
+const jwt = require('jsonwebtoken')
 
 // 添加商品
 /*
@@ -26,7 +27,7 @@ router.post('/addGood',async(req, res, next) => {
         goodName: req.body.goodName,
         goodAmount: req.body.goodAmount,
         goodPics: req.body.goodPics,
-        goodType: req.body.goodType,
+        goodTag: req.body.goodTag,
         goodPrice: req.body.goodPrice,
         goodUnit: req.body.goodUnit,
         goodDetail: req.body.goodDetail
@@ -70,7 +71,7 @@ router.post('/changeGood', async(req, res, next) => {
         good.goodName = req.body.goodName,
         good.goodAmount = req.body.goodAmount,
         good.goodPics = req.body.goodPics,
-        good.goodType = req.body.goodType,
+        good.goodTag = req.body.goodTag,
         good.goodPrice = req.body.goodPrice,
         good.goodUnit = req.body.goodUnit,
         good.goodDetail = req.body.goodDetail
@@ -112,8 +113,25 @@ router.post('/deleteGood',async(req, res, next) => {
 })
 
 // 获取商品
-router.post('/getGoods', async(req, res, next) => {
-    let userData = verifyToken(req.headers.authorization, res)
+router.post('/getGood', async(req, res, next) => {
+    let user
+    if(!req.headers.authorization){
+        user = undefined
+    }else {
+        let token = req.headers.authorization.split(' ').pop()
+        jwt.verify(token,tokenKey, (err,result) => {
+            if(err) {
+                res.send({
+                    status: errorCode,
+                    message: '用户登录过期，请登录'
+                })
+                res.end()
+            } else {
+                user = result
+            }
+        })
+    }
+
     let good = await Good.findOne({
         raw: true,
         where: {
@@ -127,36 +145,58 @@ router.post('/getGoods', async(req, res, next) => {
         })
     }
 
-    if(userData){
+    if(user){
         let userHistory = await History.findOne({
-            raw:true,
             where: {
-                userId: userData.id
+                userId: user.id
             }
         })
-        let history = JSON.parse(JSON.stringify(userHistory.browseHistory))
-        if(!history){
-            history = []
-        }
-        
-        history.unshift({
-            merchantId: good.merchantId,
-            merchantName: good.merchantName,
-            goodId: good.id,
-            goodName: goodName,
-            goodPic: good.goodPics[1]
-        })
-        userHistory.browseHistory = history
-
-        let tag = JSON.parse(JSON.stringify(userHistory.browseHistoryTag))
-        if(tag.indexOf(good.goodTag)!=-1){
-            let tmpTag = tag.splice(tag.indexOf(good.goodTag), 1)
-            tag.unshift(tmpTag)
+        if(!userHistory){
+            userHistory = await History.create({
+              userId: user.id,
+              browseHistory: [{
+                'merchantId': good.merchantId,
+                'merchantName': good.merchantName,
+                'goodId': good.id,
+                'goodName': good.goodName,
+                'goodPic': good.goodPics[1]
+            }],
+              browseHistoryTag: [good.goodTag]
+            })
+            
         } else {
-            tag.unshift(good.goodTag)
+            let history = JSON.parse(JSON.stringify(userHistory.browseHistory))
+            if(!history){
+                history = []
+            }
+            
+            let obj = {
+                merchantId: good.merchantId,
+                merchantName: good.merchantName,
+                goodId: good.id,
+                goodName: good.goodName,
+                goodPic: good.goodPics[1]
+            }
+            for(let i = 0; i < history.length; i++){
+                if(history[i].goodId === obj.goodId){
+                    history.splice(i,1)
+                    break
+                }
+            }
+            history.unshift(obj)
+            
+            userHistory.browseHistory = history
+
+            let tag = JSON.parse(JSON.stringify(userHistory.browseHistoryTag))
+            if(tag.indexOf(good.goodTag)!=-1){
+                let tmpTag = tag.splice(tag.indexOf(good.goodTag), 1)
+                tag.unshift(tmpTag[0])
+            } else {
+                tag.unshift(good.goodTag)
+            }
+            userHistory.browseHistoryTag = tag
         }
         userHistory.save()
-        
     }
 
     return res.send({

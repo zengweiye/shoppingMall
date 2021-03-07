@@ -10,6 +10,14 @@ var user = sequelize.define('user',{
     headPic: {
         type: DataTypes.STRING  
     },
+    // 性别
+    /**
+     * 1: 男
+     * 2: 女
+     */
+    sex: {
+        type: DataTypes.INTEGER
+    },
     // 密码
     password:{
         type: DataTypes.STRING,
@@ -33,7 +41,7 @@ var user = sequelize.define('user',{
     },
     // 地址
     address: {
-        type: DataTypes.STRING
+        type: DataTypes.JSON
     },
     // 是否商家
     isMerchant: {

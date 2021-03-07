@@ -3,7 +3,7 @@ var router = express.Router();
 var History = require('../model/history')
 const { successCode, errorCode, emptyCode, permissionCode, emptyMessage, permissionMessage } = require('../config/config')
 var verifyToken = require('../utils/verifyToken');
-const { Op } = require('sequelize/types');
+const { Op } = require('sequelize');
 const { result } = require('underscore');
 
 // 获取历史记录

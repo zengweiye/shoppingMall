@@ -6,7 +6,8 @@ var User = require('../model/user')
 var RegisterCode = require('../model/registerCode')
 var nodemailer = require('../utils/nodemailer')
 var randomCode = require('../utils/randomCode')
-var {tokenKey, successCode, errorCode} = require('../config/config')
+var {tokenKey, successCode, errorCode} = require('../config/config');
+const verifyToken = require('../utils/verifyToken');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -199,7 +200,7 @@ router.post('/registerCode',async(req, res, next) => {
   })
 })
 
-// 发送登录验证码
+// 发送登录/修改验证码
 /*
 *  (Object: type)
 *  email: string
@@ -226,9 +227,14 @@ router.post('/verificationCode',async(req, res, next) => {
 
 // 修改密码
 /*
-*  (Object: type)
-*  email: string
-*/
+ * (Object: type)
+ * email: string
+ * code: integer
+ * or
+ * accountName: string
+ * password: string
+ * newPassword: string
+ */
 router.post('/changePassword',async(req, res, next) => {
   let user
   if(req.body.email){
@@ -281,6 +287,109 @@ router.post('/changePassword',async(req, res, next) => {
         message: 'wrong password'
       })
     }
+})
+
+// 获取信息
+router.post('/getUserMessage', async(req, res, next) => {
+  let user = verifyToken(req.headers.authorization, res)
+  let userData = await User.findOne({
+    raw: true,
+    where: {
+      id: user.id
+    },
+    attributes: [
+      'id',
+      'accountName',
+      'headPic',
+      'phoneNumber',
+      'email',
+      'address',
+      'isMerchant'
+    ]
+  })
+  return res.send({
+    status: successCode,
+    status: 'success',
+    data: userData
+  })
+})
+
+// 修改信息
+/**
+ * (Object: type)
+ * headPic: string
+ * address: json
+ */
+router.post('/modifyMessage', async(req, res, next) => {
+  let user = verifyToken(req.headers.authorization, res)
+  let userData = await User.findOne({
+    where: {
+      id: user.id
+    }
+  })
+  userData.headPic = req.body.headPic
+  userData.address = req.body.address
+  userData.save()
+  return res.send({
+    status: successCode,
+    message: 'success'
+  })
+})
+
+// 修改手机
+/**
+ * (Object: type)
+ * phoneNumber: string
+ * code: integer
+ */
+router.post('/modifyPhoneNumber', async (req, res, next) => {
+  let user = verifyToken(req.headers.authorization, res)
+  let userData = await User.findOne({
+    where: {
+      id: user.id
+    }
+  })
+  if(req.body.code === userData.code) {
+    userData.phoneNumber = req.body.phoneNumber
+  } else {
+    return res.send({
+      status: errorCode,
+      message: "验证码错误"
+    })
+  }
+  userData.save()
+  return res.send({
+    status: successCode,
+    message: 'success',
+  })
+})
+
+// 修改邮箱
+/**
+ * (Object: type)
+ * email: string
+ * code: integer
+ */
+router.post('/modifyEmail', async (req, res, next) => {
+  let user = verifyToken(req.headers.authorization, res)
+  let userData = await User.findOne({
+    where: {
+      id: user.id
+    }
+  })
+  if(req.body.code === userData.code) {
+    userData.email = req.body.email
+  } else {
+    return res.send({
+      status: errorCode,
+      message: "验证码错误"
+    })
+  }
+  userData.save()
+  return res.send({
+    status: successCode,
+    message: 'success',
+  })
 })
 
 module.exports = router;
