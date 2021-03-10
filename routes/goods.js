@@ -2,11 +2,15 @@ const express = require('express');
 var router = express.Router();
 var Good = require('../model/good')
 var History = require('../model/history')
+var User = require('../model/user');
+var RecommendByGood = require('../model/recommendByGood')
+
 const { tokenKey, successCode, errorCode, emptyCode, permissionCode, emptyMessage, permissionMessage } = require('../config/config')
 var verifyToken = require('../utils/verifyToken');
-const User = require('../model/user');
+
 const { Op } = require('sequelize');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const good = require('../model/good');
 
 // 添加商品
 /*
@@ -271,8 +275,9 @@ router.post('/findGoods', async(req, res, next) => {
 /**
  * (Object: type)
  * goodId: integer
+ * page: integer
  */
-router.post('/recommendByGoodTag', async (req, res, next) => {
+router.post('/getRecommendByGoodTag', async (req, res, next) => {
     let good = await Good.findOne({
         raw: true,
         where: {
@@ -295,11 +300,8 @@ router.post('/recommendByGoodTag', async (req, res, next) => {
             message: emptyMessage
         })
     }
-    // 传出最高6个
-    let resultGoods = []
-    if (recommendGoods.length > 6) {
-        resultGoods = recommendGoods.splice(0, 6)
-    }
+    // 传出最高10个
+    let resultGoods = resultGoods = recommendGoods.splice(0*req.body.page, 10)
 
     return res.send({
         status: successCode,
@@ -309,11 +311,52 @@ router.post('/recommendByGoodTag', async (req, res, next) => {
 })
 
 // 根据用户浏览历史推荐
+/**
+ * (object: type)
+ * page: integer
+ */
+router.post('/getRecommendByHistory', async( req, res, next ) => {
+    let userData = verifyToken(req.headers.authorization, res)
+    let history = await History.findOne({
+        where: {
+            userId: userData.id
+        }
+    })
+    let goods = await Good.findAll({
+        where: {
+            goodTag: {[Op.in]: history.browseHistoryTag}
+        },
+        order:[
+            ['goodSellAmount','DESC']
+        ]
+    })
+    let result = goods.splice(0*req.body.page, 10)
 
+    return res.send({
+        status: successCode,
+        message: 'success',
+        data: result
+    })
+
+})
 
 // 协同过滤推荐
 /**
- * 
+ * (object: type)
+ * goodId: integer
  */
+router.post('/getRecommendByGood', async(req, res, next) => {
+    let recommendByGood = await RecommendByGood.findOne({
+        where: {
+            goodId: req.body.goodId
+        }
+    })
+    let result = recommendByGood.relatedGoods.splice(0,10)
+    return res.send({
+        status: successCode,
+        message: 'success',
+        data: result
+    })
+})
 
 module.exports = router
