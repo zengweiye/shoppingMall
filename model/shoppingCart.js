@@ -21,7 +21,7 @@ var shoppingCart = sequelize.define('shoppingCart',{
         type: DataTypes.JSON,
     }
 },{
-    initialAutoIncrement: 10000
+    initialAutoIncrement: 10001
 })
 shoppingCart.sync()
 module.exports = shoppingCart

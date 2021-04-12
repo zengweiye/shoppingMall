@@ -26,7 +26,7 @@ var recommendByGood = sequelize.define('recommendByGood', {
      *      }
      * ]
      */
-    relatedGoodTag: {
+    relatedGoodTags: {
         type: DataTypes.JSON
     }
 })

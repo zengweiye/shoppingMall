@@ -6,6 +6,7 @@ const tokenKey = 'yezi_jwt'
 
 const emptyMessage = '数据为空'
 const permissionMessage = '权限不足'
+const errorMessage = '访问错误'
 module.exports = {
     successCode,
     errorCode,

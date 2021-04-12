@@ -18,3 +18,5 @@ router.post('/getChatRecords', async(req, res, next) => {
         data: chatRecords
     })
 })
+
+module.exports = router

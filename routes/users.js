@@ -25,7 +25,7 @@ router.get('/', function(req, res, next) {
 /*
 *  (Object: type)
 *  email: sting
-*  accountName: string
+*  userName: string
 *  password: string
 *  phoneNumber: string
 *  code: string
@@ -33,6 +33,7 @@ router.get('/', function(req, res, next) {
 router.post('/register',async (req, res, next)=>{
   let isEmailExist
   let isNameExist
+  let isPhoneExist
   // 验证邮箱是否存在
   await User.findOne({
     where:{
@@ -42,26 +43,40 @@ router.post('/register',async (req, res, next)=>{
   .then(result => {
     isEmailExist = result
   })
+  // 验证手机是否存在
+  await User.findOne({
+    where:{
+      phoneNumber: req.body.phoneNumber
+    }
+  })
+  .then(result => {
+    isPhoneExist = result
+  })
   // 验证账号名是否存在
   await User.findOne({
     where: {
-      accountName: req.body.accountName
+      userName: req.body.userName
     }
   })
   .then(result => {
     isNameExist = result
   })
-  if(isEmailExist){
+  if (isEmailExist) {
     return res.send({
       status: errorCode,
       message: "email is existed"
     })
-  }else if(isNameExist) {
+  } else if (isNameExist) {
     return res.send({
       status: errorCode,
       message: "name is existed"
     })
-  }else{
+  } else if (isPhoneExist) {
+    return res.send({
+      status: errorCode,
+      message: "phoneNumber is existed"
+    })
+  } else {
     // 查找验证码
     let registerCode = await RegisterCode.findOne({
       where: {
@@ -70,14 +85,14 @@ router.post('/register',async (req, res, next)=>{
     })
     if(registerCode.code === req.body.code){
       let user = await User.create({
-        accountName: req.body.accountName,
+        userName: req.body.userName,
         password: req.body.password,
         email: req.body.email,
         phoneNumber: req.body.phoneNumber
       })
       return res.send({
         status: successCode,
-        message: 'success'
+        message: 'success',
       })
     } else {
       return res.send({
@@ -89,25 +104,27 @@ router.post('/register',async (req, res, next)=>{
 })
 
 // 登录
-/*
-*  (Object: type)
-*  email: sting || null
-*  accountName: string || null
-*  password: string || null
-*  code: string || null
+// 验证码登录或者密码登录，验证码登录时密码为空，密码登录时验证码为空
+/**
+ *  (Object: type)
+ *  email: sting || null
+ *  userName: string || null
+ *  password: string || null
+ *  code: string || null
 */
 router.post('/login', async(req, res, next) => {
   let user
+  // 判断用户是否存在
   if (req.body.email){
     user = await User.findOne({
       where:{
         email: req.body.email
       }
     })
-  } else if(req.body.accountName){
+  } else if(req.body.userName){
     user = await User.findOne({
       where:{
-        account: req.body.accountName
+        account: req.body.userName
       }
     })
   }
@@ -123,7 +140,7 @@ router.post('/login', async(req, res, next) => {
       // 设置token
       const token = 'Bearer '+jwt.sign({
         'id':user.id,
-        'accountName':user.accountName
+        'userName':user.userName
       },
       tokenKey,
       {
@@ -142,12 +159,14 @@ router.post('/login', async(req, res, next) => {
       })
     }
   }
+  // 密码登录
   let compareResult = await bcrypt.compareSync(req.body.password, user.password)
   // token设置
   if (compareResult){
     const token = 'Bearer '+jwt.sign({
       'id':user.id,
-      'accountName':user.accountName
+      'userName':user.userName,
+      'isMerchant': user.isMerchant
     },
     tokenKey,
     {
@@ -161,7 +180,7 @@ router.post('/login', async(req, res, next) => {
   }else{
     return res.send({
       status: errorCode,
-      message: 'password is wrong'
+      message: 'account or password is wrong'
     })
   }
 })
@@ -173,7 +192,7 @@ router.post('/login', async(req, res, next) => {
 */
 router.post('/registerCode',async(req, res, next) => {
   let code = randomCode()
-  const registerCode = await RegisterCode.findOne({
+  let registerCode = await RegisterCode.findOne({
     where: {
       email: req.body.email
     }
@@ -185,18 +204,21 @@ router.post('/registerCode',async(req, res, next) => {
     await RegisterCode.create({
       email: req.body.email,
       code: code
+    }).then(result => {
+      registerCode = result
     })
   }
   let mail = {
     from: 'yezi6735@163.com',
     to: req.body.email,
-    subject: '验证码',
-    text: `用${code}作为你的验证码`
+    cc: 'yezi6735@163.com',
+    subject: '这是你在商城请求的验证码',
+    text: `使用${code}作为你的验证码`
   }
   await nodemailer(mail)
   res.send({
     status: successCode,
-    message: 'success'
+    message: 'success',
   })
 })
 
@@ -231,11 +253,11 @@ router.post('/verificationCode',async(req, res, next) => {
  * email: string
  * code: integer
  * or
- * accountName: string
+ * userName: string
  * password: string
  * newPassword: string
  */
-router.post('/changePassword',async(req, res, next) => {
+router.post('/updatePassword',async(req, res, next) => {
   let user
   if(req.body.email){
     user = await User.findOne({
@@ -243,10 +265,10 @@ router.post('/changePassword',async(req, res, next) => {
         email: req.body.email
       }
     })
-  } else if (req.body.accountName) {
+  } else if (req.body.userName) {
     user = await User.findOne({
       where: {
-        accountName: req.body.accountName
+        userName: req.body.userName
       }
     })
   }
@@ -291,15 +313,15 @@ router.post('/changePassword',async(req, res, next) => {
 
 // 获取信息
 router.post('/getUserMessage', async(req, res, next) => {
-  let user = verifyToken(req.headers.authorization, res)
-  let userData = await User.findOne({
+  let userData = verifyToken(req.headers.authorization, res)
+  let user = await User.findOne({
     raw: true,
     where: {
-      id: user.id
+      id: userData.id
     },
     attributes: [
       'id',
-      'accountName',
+      'userName',
       'headPic',
       'phoneNumber',
       'email',
@@ -310,7 +332,7 @@ router.post('/getUserMessage', async(req, res, next) => {
   return res.send({
     status: successCode,
     status: 'success',
-    data: userData
+    data: user
   })
 })
 
@@ -320,16 +342,16 @@ router.post('/getUserMessage', async(req, res, next) => {
  * headPic: string
  * address: json
  */
-router.post('/modifyMessage', async(req, res, next) => {
-  let user = verifyToken(req.headers.authorization, res)
-  let userData = await User.findOne({
+router.post('/updateMessage', async(req, res, next) => {
+  let userData = verifyToken(req.headers.authorization, res)
+  let user = await User.findOne({
     where: {
-      id: user.id
+      id: userData.id
     }
   })
-  userData.headPic = req.body.headPic
-  userData.address = req.body.address
-  userData.save()
+  user.headPic = req.body.headPic
+  user.address = req.body.address
+  user.save()
   return res.send({
     status: successCode,
     message: 'success'
@@ -342,22 +364,22 @@ router.post('/modifyMessage', async(req, res, next) => {
  * phoneNumber: string
  * code: integer
  */
-router.post('/modifyPhoneNumber', async (req, res, next) => {
-  let user = verifyToken(req.headers.authorization, res)
-  let userData = await User.findOne({
+router.post('/updatePhoneNumber', async (req, res, next) => {
+  let userData = verifyToken(req.headers.authorization, res)
+  let user = await User.findOne({
     where: {
-      id: user.id
+      id: userData.id
     }
   })
-  if(req.body.code === userData.code) {
-    userData.phoneNumber = req.body.phoneNumber
+  if(req.body.code === user.code) {
+    user.phoneNumber = req.body.phoneNumber
   } else {
     return res.send({
       status: errorCode,
       message: "验证码错误"
     })
   }
-  userData.save()
+  user.save()
   return res.send({
     status: successCode,
     message: 'success',
@@ -370,22 +392,22 @@ router.post('/modifyPhoneNumber', async (req, res, next) => {
  * email: string
  * code: integer
  */
-router.post('/modifyEmail', async (req, res, next) => {
-  let user = verifyToken(req.headers.authorization, res)
-  let userData = await User.findOne({
+router.post('/updateEmail', async (req, res, next) => {
+  let userData = verifyToken(req.headers.authorization, res)
+  let user = await User.findOne({
     where: {
-      id: user.id
+      id: userData.id
     }
   })
-  if(req.body.code === userData.code) {
-    userData.email = req.body.email
+  if(req.body.code === user.code) {
+    user.email = req.body.email
   } else {
     return res.send({
       status: errorCode,
       message: "验证码错误"
     })
   }
-  userData.save()
+  user.save()
   return res.send({
     status: successCode,
     message: 'success',

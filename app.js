@@ -8,11 +8,14 @@ var cors = require('cors')
 var app = express();
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var userRouter = require('./routes/users');
 var goodRouter = require('./routes/goods');
 var commentRouter = require('./routes/comments');
 var shoppingCartRouter = require('./routes/shoppingCarts')
-var history = require('./routes/historys')
+var historyRouter = require('./routes/historys')
+var orderRouter = require('./routes/orders')
+var upload = require('./uploads/upload')
+var adminRouter = require('./routes/admins')
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -27,11 +30,14 @@ app.use('/demo',express.static(path.join(__dirname, 'demo')));//web端
 // app.use('/manage',express.static(path.join(__dirname, 'manage')));//后台管理端
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/users', userRouter);
 app.use('/goods', goodRouter);
 app.use('/comments', commentRouter);
 app.use('/shoppingCarts', shoppingCartRouter);
-app.use('/historys', history);
+app.use('/historys', historyRouter);
+app.use('/orders', orderRouter);
+app.use(upload);
+app.use('/admins', adminRouter)
 
 
 // catch 404 and forward to error handler

@@ -17,20 +17,21 @@ const good = require('../model/good');
 *  (Object: type)
 *  goodName: string
 *  goodAmount: integer
-*  goodPics: json
-*  goodType: string
+*  goodPictures: json
+*  goodTag: string
 *  goodPrice: integer
 *  goodUnit: string
 *  goodDetail: string
 */
 router.post('/addGood',async(req, res, next) => {
     let userData = verifyToken(req.headers.authorization, res)
+    console.log(req.body.goodPictures)
     await Good.create({
         merchantId: userData.id,
-        merchantName: userData.accountName,
+        merchantName: userData.userName,
         goodName: req.body.goodName,
         goodAmount: req.body.goodAmount,
-        goodPics: req.body.goodPics,
+        goodPictures: req.body.goodPictures,
         goodTag: req.body.goodTag,
         goodPrice: req.body.goodPrice,
         goodUnit: req.body.goodUnit,
@@ -47,13 +48,13 @@ router.post('/addGood',async(req, res, next) => {
 *  (Object: type)
 *  goodName: string
 *  goodAmount: integer
-*  goodPics: json
-*  goodType: string
+*  goodPictures: json
+*  goodTag: string
 *  goodPrice: integer
 *  goodUnit: string
 *  goodDetail: string
 */
-router.post('/changeGood', async(req, res, next) => {
+router.post('/updateGood', async(req, res, next) => {
     let userData = verifyToken(req.headers.authorization, res)
     let good = await Good.findOne({
         where: {
@@ -74,7 +75,7 @@ router.post('/changeGood', async(req, res, next) => {
     } else {
         good.goodName = req.body.goodName,
         good.goodAmount = req.body.goodAmount,
-        good.goodPics = req.body.goodPics,
+        good.goodPictures = req.body.goodPictures,
         good.goodTag = req.body.goodTag,
         good.goodPrice = req.body.goodPrice,
         good.goodUnit = req.body.goodUnit,
@@ -87,7 +88,7 @@ router.post('/changeGood', async(req, res, next) => {
     })
 })
 
-// 删除商品
+// 下架商品
 /*
 *  (Object: type)
 *  goodId: integer
@@ -117,6 +118,10 @@ router.post('/deleteGood',async(req, res, next) => {
 })
 
 // 获取商品
+/**
+ * (Object: type)
+ * goodId: integer
+ */
 router.post('/getGood', async(req, res, next) => {
     let user
     if(!req.headers.authorization){
@@ -148,7 +153,7 @@ router.post('/getGood', async(req, res, next) => {
             message: emptyMessage
         })
     }
-
+    // 将历史记录写入数据库
     if(user){
         let userHistory = await History.findOne({
             where: {
@@ -163,7 +168,7 @@ router.post('/getGood', async(req, res, next) => {
                 'merchantName': good.merchantName,
                 'goodId': good.id,
                 'goodName': good.goodName,
-                'goodPic': good.goodPics[1]
+                'goodPic': good.goodPictures[1]
             }],
               browseHistoryTag: [good.goodTag]
             })
@@ -179,7 +184,7 @@ router.post('/getGood', async(req, res, next) => {
                 merchantName: good.merchantName,
                 goodId: good.id,
                 goodName: good.goodName,
-                goodPic: good.goodPics[1]
+                goodPic: good.goodPictures[1]
             }
             for(let i = 0; i < history.length; i++){
                 if(history[i].goodId === obj.goodId){
@@ -218,7 +223,7 @@ router.post('/getGood', async(req, res, next) => {
 router.post('/findMerchantGoods', async(req, res, next) => {
     let merchantName = await User.findOne({
         where: {
-            accountName: req.body.merchantName
+            userName: req.body.merchantName
         }
     })
     if (!merchantName){
@@ -248,6 +253,8 @@ router.post('/findMerchantGoods', async(req, res, next) => {
 router.post('/findGoods', async(req, res, next) => {
     let goods = await Good.findAll({
         raw: true,
+        limit: 10,
+        offset: 10*(req.body.page-1),
         order: [
             ['goodName','DESC']
         ],
@@ -263,11 +270,10 @@ router.post('/findGoods', async(req, res, next) => {
             message:emptyMessage
         })
     }
-    let resultGoods = goods.splice((res.body.page-1)*10, 10)
     return res.send({
         status: successCode,
         message: 'success',
-        data: resultGoods
+        data: goods
     })
 })
 
@@ -287,6 +293,8 @@ router.post('/getRecommendByGoodTag', async (req, res, next) => {
     let goodTag = good.goodTag
     let recommendGoods = await Good.findAll({
         raw: true,
+        limit: 10,
+        offset: 10*(req.body.page-1),
         where: {
             goodTag: goodTag
         },
@@ -300,8 +308,6 @@ router.post('/getRecommendByGoodTag', async (req, res, next) => {
             message: emptyMessage
         })
     }
-    // 传出最高10个
-    let resultGoods = resultGoods = recommendGoods.splice(0*req.body.page, 10)
 
     return res.send({
         status: successCode,
@@ -318,6 +324,8 @@ router.post('/getRecommendByGoodTag', async (req, res, next) => {
 router.post('/getRecommendByHistory', async( req, res, next ) => {
     let userData = verifyToken(req.headers.authorization, res)
     let history = await History.findOne({
+        limit: 10,
+        offset: 10*(req.body.page-1),
         where: {
             userId: userData.id
         }
@@ -330,7 +338,6 @@ router.post('/getRecommendByHistory', async( req, res, next ) => {
             ['goodSellAmount','DESC']
         ]
     })
-    let result = goods.splice(0*req.body.page, 10)
 
     return res.send({
         status: successCode,
@@ -347,11 +354,12 @@ router.post('/getRecommendByHistory', async( req, res, next ) => {
  */
 router.post('/getRecommendByGood', async(req, res, next) => {
     let recommendByGood = await RecommendByGood.findOne({
+        limit: 10,
+        offset: 10*(req.body.page-1),
         where: {
             goodId: req.body.goodId
         }
     })
-    let result = recommendByGood.relatedGoods.splice(0,10)
     return res.send({
         status: successCode,
         message: 'success',

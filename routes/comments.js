@@ -11,7 +11,7 @@ var { buildTree } = require('../utils/buildTree');
 *  (Object: type)
 *  goodId: integer
 *  commentContent: string
-*  commentPics: json
+*  commentPictures: json
 *  parentId: integer
 *  parentKey: string
 */
@@ -28,9 +28,9 @@ router.post('/addComment', async (req, res, next) => {
     await Comment.create({
         goodId: req.body.goodId,
         postCommenterId: user.id,
-        postCommenterName: user.accountName,
+        postCommenterName: user.userName,
         commentContent: req.body.commentContent,
-        commentPics: req.body.commentPics,
+        commentPictures: req.body.commentPictures,
         parentId: req.body.parentId,
         parentKey: parentComment ? parentComment.commentKey : ''
     })
@@ -112,9 +112,9 @@ router.post('/deleteComment', async(req, res, next) => {
 *  (Obejct: type)
 *  commentId: integer
 *  commentContent: string
-*  commentPics: json
+*  commentPictures: json
 */
-router.post('/changeComment', async(req, res, next) => {
+router.post('/updateComment', async(req, res, next) => {
     let userData = verifyToken(req.headers.authorization, res)
     let comment = await Comment.findOne({
         where: {
@@ -129,7 +129,7 @@ router.post('/changeComment', async(req, res, next) => {
     }
     console.log(comment.commentContent)
     comment.commentContent = req.body.commentContent
-    comment.commentPics = req.body.commentPics
+    comment.commentPictures = req.body.commentPictures
     comment.save()
     return res.send({
         status: successCode,

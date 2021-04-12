@@ -18,7 +18,7 @@ var comment = sequelize.define('comment',{
         type: DataTypes.STRING
     },
     // 评论图片
-    commentPics: {
+    commentPictures: {
         type: DataTypes.JSON
     },
     // 评论键(用于快速删除)
@@ -38,7 +38,7 @@ var comment = sequelize.define('comment',{
         defaultValue: ''
     }
 },{
-    initialAutoIncrement: 10000
+    initialAutoIncrement: 10001
 })
 comment.sync()
 module.exports = comment

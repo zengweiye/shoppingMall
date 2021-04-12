@@ -11,19 +11,19 @@ var good = sequelize.define('good',{
     },
     // 商品名称
     goodName: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING(30)
     },
     // 商品数量
     goodAmount: {
         type: DataTypes.INTEGER
     },
     // 商品图片
-    goodPics: {
+    goodPictures: {
         type: DataTypes.JSON
     },
     // 商品标签
     goodTag: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING(10)
     },
     // 商品价格
     goodPrice: {
@@ -31,18 +31,19 @@ var good = sequelize.define('good',{
     },
     // 商品单位
     goodUnit: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING(10)
     },
     // 商品销量
     goodSellAmount: {
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     },
     // 详细内容
     goodDetail: {
         type: DataTypes.STRING
     }
 },{
-    initialAutoIncrement: 10000
+    initialAutoIncrement: 10001
 })
 good.sync()
 module.exports = good

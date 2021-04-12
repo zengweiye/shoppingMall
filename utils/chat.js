@@ -15,7 +15,7 @@ module.exports = server => {
         console.log(socket.id,'success')
         // 连接
         // 上线时将数据库中的部分聊天记录展示出来
-        // 
+
         socket.on('online', user => {
             socket.userName = user.name
             socket.userId = user.id
@@ -51,40 +51,41 @@ module.exports = server => {
 
             // 记录保存到数据库
             // 保存到发送者数据库
-            console.log(senderId)
-            let senderChatRecords = await ChatRecord.findOne({
-                where: {
-                    userId: senderId
-                }
-            })
-            console.log(senderChatRecords)
-            if ( !senderChatRecords ) {
-                console.log('create')
-                senderChatRecords = await ChatRecord.create({
-                    userId: senderId,
-                    userName: senderName,
-                    chatRecords: {}
+            if(senderName != 'admin'){
+                console.log(senderId)
+                let senderChatRecords = await ChatRecord.findOne({
+                    where: {
+                        userId: senderId
+                    }
                 })
-            }
-            if ( !senderChatRecords.chatRecords[receiverName] ) {
-                senderChatRecords.chatRecords[receiverName] = []
-            }
-            console.log(senderChatRecords.chatRecords[receiverName])
-            let chatRecords = JSON.parse(JSON.stringify(senderChatRecords.chatRecords))
-            let tmpChatRecords = chatRecords[receiverName]
+                console.log(senderChatRecords)
+                if ( !senderChatRecords ) {
+                    console.log('create')
+                    senderChatRecords = await ChatRecord.create({
+                        userId: senderId,
+                        userName: senderName,
+                        chatRecords: {}
+                    })
+                }
+                if ( !senderChatRecords.chatRecords[receiverName] ) {
+                    senderChatRecords.chatRecords[receiverName] = []
+                }
+                console.log(senderChatRecords.chatRecords[receiverName])
+                let chatRecords = JSON.parse(JSON.stringify(senderChatRecords.chatRecords))
+                let tmpChatRecords = chatRecords[receiverName]
 
-            //判断信息数量，最多一百条
-            let receiverObj = {}
-            receiverObj[senderName] = message
-            tmpChatRecords.push( receiverObj )
-            if( tmpChatRecords.length > 100 ) {
-                tmpChatRecords.shift()
+                //判断信息数量，最多一百条
+                let receiverObj = {}
+                receiverObj[senderName] = message
+                tmpChatRecords.push( receiverObj )
+                if( tmpChatRecords.length > 100 ) {
+                    tmpChatRecords.shift()
+                }
+                
+                senderChatRecords.chatRecords = chatRecords
+                console.log(senderChatRecords.chatRecords[receiverName])
+                senderChatRecords.save()
             }
-            
-            senderChatRecords.chatRecords = chatRecords
-            console.log(senderChatRecords.chatRecords[receiverName])
-            senderChatRecords.save()
-
             // 保存到接收者数据库
             let receiverChatRecords = await ChatRecord.findOne({
                 where: {

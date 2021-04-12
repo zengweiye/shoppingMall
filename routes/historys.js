@@ -11,7 +11,6 @@ const { result } = require('underscore');
  * (Object: type)
  * page: integer
  */
-
 router.post('/geHistory', async(req, res, next) => {
     let userData = verifyToken(req.headers.authorization, res)
     let history = await History.findOne({
@@ -31,6 +30,24 @@ router.post('/geHistory', async(req, res, next) => {
         status: successCode,
         message: 'success',
         data: resultHistory
+    })
+})
+
+// 删除历史
+/**
+ * (Object: type)
+ * historyId: integer
+ */
+router.post('/deleteHistory', async(req, res, next) => {
+    let userData = verifyToken(req.headers.authorization, res)
+    await History.destroy({
+        where:{
+            id: req.body.historyId
+        }
+    })
+    return res.send({
+        status: successCode,
+        message: 'success'
     })
 })
 

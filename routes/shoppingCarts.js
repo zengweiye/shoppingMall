@@ -1,6 +1,7 @@
 const express = require('express');
 var router = express.Router();
 var ShoppingCart = require('../model/shoppingCart')
+var Good = require('../model/good')
 const { successCode, errorCode, emptyCode } = require('../config/config')
 var verifyToken = require('../utils/verifyToken');
 
@@ -67,9 +68,13 @@ router.post('/deleteShoppingCart', async(req, res, next) => {
 
 // 添加到购物车
 /*
-*  (Object: type)
-*  good: json
-*/
+ *  (Object: type)
+ *  good: {
+ *     goodId,
+ *     goodName,
+ *     goodAmount
+ * }
+ */
 router.post('/addToShoppingCart', async(req, res, next) => {
     let user = verifyToken(req.headers.authorization, res)
     let shoppingCart = await ShoppingCart.findOne({
@@ -77,20 +82,28 @@ router.post('/addToShoppingCart', async(req, res, next) => {
             userId: user.id
         }
     })
-    console.log(req.body.good)
+    let good = await Good.findOne({
+        where: {
+            id: req.body.good.goodId
+        }
+    })
+    if (good.goodAmount < req.body.good.goodAmount) {
+        return res.send({
+            status: errorCode,
+            message: '库存不足'
+        })
+    }
     if (!shoppingCart) {
         shoppingCart = await ShoppingCart.create({
             userId : user.id,
             goods : [req.body.good]
         })
     } else {
-        console.log(1, shoppingCart.goods)
         let tmp = JSON.parse(JSON.stringify(shoppingCart.goods))
         tmp.push(req.body.good)
         shoppingCart.goods = tmp
     }
     shoppingCart.save()
-    console.log(shoppingCart.id, shoppingCart.goods)
     
     return res.send({
         status: successCode,
